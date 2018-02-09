@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -18,10 +20,13 @@ import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.NoSuchFrameException;
 import org.openqa.selenium.NoSuchWindowException;
 import org.openqa.selenium.OutputType;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.ie.InternetExplorerDriver;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
@@ -32,10 +37,11 @@ import utils.Reporter;
 public class SeMethods extends Reporter implements WdMethods{
 
 	public RemoteWebDriver driver;
-	public String sUrl,primaryWindowHandle,sHubUrl,sHubPort;
-
+	public String sUrl,sHubUrl,sHubPort;
+	public Properties prop;
+	
 	public SeMethods() {
-		Properties prop = new Properties();
+		prop = new Properties();
 		try {
 			prop.load(new FileInputStream(new File("./src/main/resources/config.properties")));
 			sHubUrl = prop.getProperty("HUB");
@@ -48,31 +54,42 @@ public class SeMethods extends Reporter implements WdMethods{
 		}
 	}
 
+	public void startApp(String browser, boolean bRemote) {
+		try {
+			DesiredCapabilities dc = new DesiredCapabilities();
+			dc.setBrowserName(browser);
+			dc.setPlatform(Platform.WINDOWS);
+			// this is for grid run
+			if(bRemote)
+				try {
+					driver = new RemoteWebDriver(new URL("http://"+sHubUrl+":"+sHubPort+"/wd/hub"), dc);
+				} catch (MalformedURLException e) {
+				}
+			else{ // this is for local run
+				if(browser.equalsIgnoreCase("chrome")){
+					System.setProperty("webdriver.chrome.driver", "./drivers/chromedriver.exe");
+					driver = new ChromeDriver();
+				}else {
+					System.setProperty("webdriver.gecko.driver", "./drivers/geckodriver.exe");
+					driver = new FirefoxDriver();
+				}
+			}
+			driver.manage().window().maximize();
+			driver.manage().timeouts().implicitlyWait(30, TimeUnit.SECONDS);
+			driver.get(sUrl);
+			reportStep("The browser: "+browser+" launched successfully", "PASS");
+		} catch (WebDriverException e) {			
+			reportStep("The browser: "+browser+" could not be launched", "FAIL");
+		}
+	}
 
 	public void startApp(String browser) {
-		try {
-			if(browser.equalsIgnoreCase("chrome")) {
-				System.setProperty("webdriver.chrome.driver", "./drivers/chromedriver.exe");
-				driver = new ChromeDriver();
-				
-			} else if(browser.equalsIgnoreCase("ie")) {
-				System.setProperty("webdriver.ie.driver", "./drivers/internetexplorerserver.exe");
-				driver = new InternetExplorerDriver();
-			}
-			driver.manage().timeouts().implicitlyWait(20, TimeUnit.SECONDS);
-			driver.get(sUrl);
-			driver.manage().window().maximize();	
-		
-			reportStep("The browser:" + browser + " launched successfully", "PASS");
-		} catch (WebDriverException e) {			
-			reportStep("The browser:" + browser + " could not be launched", "FAIL");
-		}
+		startApp(browser, false);
 	}
 
 	public WebElement locateElement(String locator, String locValue) {
 		try {
 			switch(locator) {
-			
 			case("id"): return driver.findElementById(locValue);
 			case("link"): return driver.findElementByLinkText(locValue);
 			case("xpath"):return driver.findElementByXPath(locValue);
@@ -81,29 +98,28 @@ public class SeMethods extends Reporter implements WdMethods{
 			case("tag"):return driver.findElementByTagName(locValue);
 			}
 		} catch (NoSuchElementException e) {
-			reportStep("The element with locator "+locator+" and with value "+locValue+" not found.","FAIL");
+			reportStep("The element with locator "+locator+" not found.","FAIL");
 			throw new RuntimeException();
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException", "FAIL");
+			reportStep("Unknown exception occured while finding "+locator+" with the value "+locValue, "FAIL");
 		}
 		return null;
 	}
-	
+
 	public WebElement locateElement(String locValue) {
 		return driver.findElementById(locValue);
 	}
-
 
 	public void type(WebElement ele, String data) {
 		try {
 			ele.clear();
 			ele.sendKeys(data);
-			System.out.println(driver.getSessionId());
-			reportStep("The data: "+data+" entered successfully in field :"+ele, "PASS");
+			String x = ""+ele;
+			reportStep("The data: "+data+" entered successfully in the field :"+ele, "PASS");
 		} catch (InvalidElementStateException e) {
-			reportStep("The element: "+ele+" is not interactable","FAIL");
+			reportStep("The data: "+data+" could not be entered in the field :"+ele,"FAIL");
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while entering "+data+" in the field :"+ele, "FAIL");
 		}
 	}
 
@@ -114,13 +130,12 @@ public class SeMethods extends Reporter implements WdMethods{
 			wait.until(ExpectedConditions.elementToBeClickable(ele));			
 			text = ele.getText();
 			ele.click();
-			reportStep("The element : "+text+" is clicked "+text, "PASS");
+			reportStep("The element "+text+" is clicked", "PASS");
 		} catch (InvalidElementStateException e) {
-			reportStep("The element: "+text+" is not interactable", "FAIL");
+			reportStep("The element: "+text+" could not be clicked", "FAIL");
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while clicking in the field :", "FAIL");
 		} 
-
 	}
 
 	public void clickWithNoSnap(WebElement ele) {
@@ -129,13 +144,12 @@ public class SeMethods extends Reporter implements WdMethods{
 			WebDriverWait wait = new WebDriverWait(driver, 10);
 			wait.until(ExpectedConditions.elementToBeClickable(ele));	
 			text = ele.getText();
-			ele.click();
-		//	switchToWindow(0);
-		reportStep("The element :"+text+"  is clicked.", "PASS",false);
+			ele.click();			
+			reportStep("The element :"+text+"  is clicked.", "PASS",false);
 		} catch (InvalidElementStateException e) {
-			reportStep("The element: "+text+" is not interactable", "FAIL",false);
+			reportStep("The element: "+text+" could not be clicked", "FAIL",false);
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL",false);
+			reportStep("Unknown exception occured while clicking in the field :","FAIL",false);
 		} 
 	}
 
@@ -144,7 +158,7 @@ public class SeMethods extends Reporter implements WdMethods{
 		try {
 			bReturn = ele.getText();
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("The element: "+ele+" could not be found.", "FAIL");
 		}
 		return bReturn;
 	}
@@ -154,7 +168,7 @@ public class SeMethods extends Reporter implements WdMethods{
 		try {
 			bReturn =  driver.getTitle();
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("Unknown Exception Occured While fetching Title", "FAIL");
 		} 
 		return bReturn;
 	}
@@ -164,7 +178,7 @@ public class SeMethods extends Reporter implements WdMethods{
 		try {
 			bReturn=  ele.getAttribute(attribute);
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("The element: "+ele+" could not be found.", "FAIL");
 		} 
 		return bReturn;
 	}
@@ -174,7 +188,7 @@ public class SeMethods extends Reporter implements WdMethods{
 			new Select(ele).selectByVisibleText(value);
 			reportStep("The dropdown is selected with text "+value,"PASS");
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("The element: "+ele+" could not be found.", "FAIL");
 		}
 
 	}
@@ -184,36 +198,35 @@ public class SeMethods extends Reporter implements WdMethods{
 			new Select(ele).selectByIndex(index);
 			reportStep("The dropdown is selected with index "+index,"PASS");
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException"+e.getMessage(), "FAIL");
+			reportStep("The element: "+ele+" could not be found.", "FAIL");
 		} 
 
 	}
 
-	public boolean verifyTitle(String expectedTitle) {
+	public boolean verifyTitle(String title) {
 		boolean bReturn =false;
 		try {
-			if(getTitle().equals(expectedTitle)) {
-				reportStep("The expected title matches the actual "+expectedTitle,"PASS");
+			if(getTitle().equals(title)) {
+				reportStep("The title of the page matches with the value :"+title,"PASS");
 				bReturn= true;
 			}else {
-				reportStep(getTitle()+" The expected title doesn't matches the actual "+expectedTitle,"FAIL");
+				reportStep("The title of the page:"+driver.getTitle()+" did not match with the value :"+title, "FAIL");
 			}
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException : "+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while verifying the title", "FAIL");
 		} 
 		return bReturn;
-
 	}
 
 	public void verifyExactText(WebElement ele, String expectedText) {
 		try {
 			if(getText(ele).equals(expectedText)) {
-				reportStep("The expected text matches the actual "+expectedText,"PASS");
+				reportStep("The text: "+getText(ele)+" matches with the value :"+expectedText,"PASS");
 			}else {
-				reportStep("The expected text doesn't matches the actual "+expectedText,"FAIL");
+				reportStep("The text "+getText(ele)+" doesn't matches the actual "+expectedText,"FAIL");
 			}
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException : "+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while verifying the Text", "FAIL");
 		} 
 
 	}
@@ -226,7 +239,7 @@ public class SeMethods extends Reporter implements WdMethods{
 				reportStep("The expected text doesn't contain the actual "+expectedText,"FAIL");
 			}
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException : "+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while verifying the Text", "FAIL");
 		} 
 	}
 
@@ -238,7 +251,7 @@ public class SeMethods extends Reporter implements WdMethods{
 				reportStep("The expected attribute :"+attribute+" value does not matches the actual "+value,"FAIL");
 			}
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException : "+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while verifying the Attribute Text", "FAIL");
 		} 
 
 	}
@@ -251,7 +264,7 @@ public class SeMethods extends Reporter implements WdMethods{
 				reportStep("The expected attribute :"+attribute+" value does not contains the actual "+value,"FAIL");
 			}
 		} catch (WebDriverException e) {
-			reportStep("WebDriverException : "+e.getMessage(), "FAIL");
+			reportStep("Unknown exception occured while verifying the Attribute Text", "FAIL");
 		}
 	}
 
@@ -376,6 +389,6 @@ public class SeMethods extends Reporter implements WdMethods{
 	}
 
 
-	
+
 
 }

@@ -6,32 +6,27 @@ import org.testng.annotations.Test;
 import pages.LoginPage;
 import wdMethods.ProjectMethods;
 
-public class TC001_LogInLogOut extends ProjectMethods{
+public class TC001_LogInAndLogOut extends ProjectMethods{
+	
 	@BeforeClass
 	public void setData() {
+		testCaseName = "TC001_LogInAndLogOut";
+		testDescription = "Login and Logout (positive)";
+		category="smoke";
+		authors = "sarath";
 		dataSheetName = "TC001_Login";
-		testCaseName = "TC001_LogInLogOut";
-		testDescription = "To Test Login and LogOut";
-		category= "Smoke";
-		authors	="Nesa";
 		browserName ="chrome";
 	}
 	
 	@Test(dataProvider="fetchData")
-	public void logInLogOut(String userName, String passWord) {
+	public void logInAndLogOut(String uName,String pwd/*,String vName*/) {
 		
 		new LoginPage(driver, test)
-		.enterUserName(userName)
-		.enterPassword(passWord)
+		.enterUserName(uName)
+		.enterPassword(pwd)
 		.clickLogin()
-		
-		.clickLogout();
-		
-		
-		
-		
-		
-		
+		//.verifyLoggedInName(vName)
+		.clickLogOut();
 		
 	}
 

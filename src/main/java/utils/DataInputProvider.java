@@ -23,7 +23,7 @@ public class DataInputProvider{
 			// get the number of columns
 			int columnCount = sheet.getRow(0).getLastCellNum();
 			data = new String[rowCount][columnCount];
-
+// data[1][]=sheet.getRow(i).getCell(3).getStringCellValue();
 
 			// loop through the rows
 			for(int i=1; i <rowCount+1; i++){

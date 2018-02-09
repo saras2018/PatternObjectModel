@@ -1,5 +1,7 @@
 package wdMethods;
 
+import java.net.MalformedURLException;
+
 import org.openqa.selenium.ElementNotVisibleException;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
@@ -12,10 +14,10 @@ public interface WdMethods {
 		 * maximise the browser and set the wait for 30 seconds 
 		 * and load the url
 		 * @author Babu - TestLeaf
-		 * @param browser - This will load the specified browser
-		 * 		 * 
+		 * @param browser - This will load the specified browser  
+		 * @throws MalformedURLException 
 		 */
-		public void startApp(String browser) ;
+		public void startApp(String browser, boolean bReturns) throws MalformedURLException ;
 
 		/**
 		 * This method will locate the element using any given locator
