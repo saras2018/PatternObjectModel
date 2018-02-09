@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="Suite">
+<suite name="Suite"  parallel="classes" thread-count="2">
   <test name="Test">
     <classes>
-      <class name="testcases.TC001_LogInLogOut"/>
+      <!-- <class name="testcases.TC001_LoginLogOut"/>
+      <class name="testcases.TC002_LoginLogOutForFailure"/> -->
+      <class name="testcases.TC003_CreateLead"/>
     </classes>
   </test> <!-- Test -->
 </suite> <!-- Suite -->
